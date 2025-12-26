@@ -1,32 +1,29 @@
-from task1_countries import (
-    filter_countries,
-    nordic_reduce,
-    to_upper,
-)
-from task2_aco import ant_colony_optimization, generate_points
-from utils import load_json
+from document_processor import DocumentProcessor
+from vectorstore_builder import VectorStoreBuilder
+from rag_system import PermianRAGSystem
+from experiment import answer_without_rag, answer_with_rag
+from questions import QUESTIONS
+from evaluation import keyword_score
 
+processor = DocumentProcessor("data")
+data = processor.load_and_chunk()
 
-def main():
-    print("=== ЗАДАНИЕ 1: СТРАНЫ ===")
-    countries = load_json("countries.json")
+builder = VectorStoreBuilder(data["chunks"])
+vectorstore = builder.build()
 
-    print("Верхний регистр:")
-    print(to_upper(countries))
+rag = PermianRAGSystem(vectorstore)
 
-    print("\nФильтрация:")
-    print(filter_countries(countries))
-
-    print("\nСеверная Европа:")
-    print(nordic_reduce())
-
-    print("\n=== ЗАДАНИЕ 2: МУРАВЬИНЫЙ АЛГОРИТМ ===")
-    points = list(generate_points(200))
-    optimizer = ant_colony_optimization(points, iterations=10)
-
-    for path, length in optimizer:
-        print(f"Длина маршрута: {length:.2f}")
-
-
-if __name__ == "__main__":
-    main()
+for q in QUESTIONS:
+    question = q["question"]
+    keywords = q["expected_keywords"]
+    print("\n" + "="*80) 
+    print(f"Вопрос: {question}") 
+    # Ответ без RAG 
+    ans_no_rag = answer_without_rag(question) 
+    print("\nОтвет без RAG:") 
+    print(ans_no_rag) 
+    # Ответ с RAG 
+    ans_rag = answer_with_rag(question, vectorstore) 
+    print("\nОтвет с RAG:") 
+    print(ans_rag['answer']) 
+    print("Источники:", [src['title'] for src in ans_rag['sources']])
